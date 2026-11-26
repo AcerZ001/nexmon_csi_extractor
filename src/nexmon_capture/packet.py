@@ -38,6 +38,7 @@ class CSIFrame:
     header: bytes
 
     def wire_row(self, rx_mac: bytes) -> list:
+        """Append the original 70-byte header after the six existing fields."""
         return [
             self.csi_value,
             self.tx_mac,
@@ -45,6 +46,7 @@ class CSIFrame:
             self.rssi,
             self.timestamp,
             self.gain,
+            self.header,
         ]
 
 

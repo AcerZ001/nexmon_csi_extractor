@@ -71,8 +71,9 @@ SEND_SHUTDOWN_TIMEOUT_SEC=3
 ```
 
 Set `SEND_CSI_DATA=false` to record only in the local database. This is the default.
-Forwarding uses unencrypted TCP. The server must accept the existing legacy
-length-prefixed pickle CSI protocol without TLS or receiver authentication.
+Forwarding uses unencrypted TCP. The server must accept length-prefixed pickle
+CSI messages without TLS or receiver authentication, including the seventh
+field containing the original 70-byte Nexmon header.
 This extractor does not register with the server through MQTT.
 
 Replace the example IPs with the actual destination addresses. Separate them with
@@ -84,8 +85,14 @@ Each machine has a separate sender subprocess and limited queue. Network sends
 and message serialization run in those subprocesses. An unavailable machine or
 full queue cannot delay local extraction/storage or the other sender processes.
 When a queue fills, forwarded copies for that machine are dropped; local records
-stay saved. Failed sends are not replayed automatically. The Nexmon message format
-and CSI/gain byte encodings are preserved.
+stay saved. Failed sends are not replayed automatically. CSI/gain byte encodings
+are preserved, and the complete header is included in each forwarded row.
+
+Deploy and restart the updated unified receiver **before** updating/restarting the
+Pi extractor. The receiver accepts both older six-field messages and the extended
+seven-field messages. New messages populate `nexmon_header`; older messages and
+historical records can still show NULL. No database migration or `.env` change is
+needed for the header.
 
 The receiver's MAC is read from `NEXMON_IFACE` automatically. `RX_MAC_ADDRESS`
 can override it when required by your server's receiver mapping.
@@ -209,7 +216,7 @@ pending are counted as dropped; locally committed frames remain saved.
 - **mcp size mismatch:** the default `NEXMON_CONFIG_LENGTH=106` retains the old
   launcher's `-l106`. Use the `mcp` and parameter length matching your installed
   firmware. A reported size mismatch is detected before radio changes.
-- **TCP failures:** verify `CONTROL_IP`, `TCP_PORT` and the server's legacy plain
+- **TCP failures:** verify `CONTROL_IP`, `TCP_PORT` and the server's compatible plain
   TCP listener. Local recording continues. Failed or queue-dropped batches are
   not replayed automatically; the database retains the locally committed CSI.
 - **Sender subprocess exited:** its destination drops new forwarded batches while

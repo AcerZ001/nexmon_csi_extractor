@@ -52,7 +52,7 @@ TCP_PORT=8080
 ```
 
 Set `SEND_CSI_DATA=true` to enable **unencrypted TCP forwarding**. Local storage
-is always enabled. The server must expose its legacy CSI TCP listener; a
+is always enabled. The server must expose a compatible CSI TCP listener; a
 TLS/authenticated-only listener will not accept these messages. MQTT registration,
 receiver tokens and certificate settings are no longer used.
 
@@ -140,7 +140,7 @@ Each committed batch is sent using a new TCP connection:
 pickle.dumps(rows, protocol=pickle.HIGHEST_PROTOCOL)
 
 rows = [
-    [csi_bytes, tx_mac_bytes, rx_mac_bytes, rssi, timestamp_us, gain_bytes],
+    [csi_bytes, tx_mac_bytes, rx_mac_bytes, rssi, timestamp_us, gain_bytes, header_bytes],
     ...
 ]
 ```
@@ -153,8 +153,14 @@ lna1_1, mix_1, dvga_1, lna1_2, mix_2, lna1_9,
 lna1_10, mix_10, lpf1_10, dvga_10, agcGain
 ```
 
-This keeps the existing Nexmon six-field row format, CSI bytes, gain bytes and
-pickle protocol. Existing Nexmon receivers can continue decoding the messages.
+The seventh field is the full original **70-byte Gain Recovery V2 header**. The
+first six fields and their CSI/gain encodings keep their original meanings.
+Upgrade and restart the unified receiver before deploying/restarting this sender;
+older receivers that require exactly six fields will reject the extended rows.
+The updated unified receiver accepts both old six-field rows (stored with a NULL
+header) and new seven-field rows (stored with the exact transmitted header).
+Existing NULL headers are not backfilled. No `.env` toggle is needed to include
+the header; every newly forwarded frame includes it.
 
 Each committed batch is offered to every destination using a nonblocking queue
 call. Background queue feeders handle IPC; row conversion, pickle serialization,
@@ -193,6 +199,6 @@ Tests cover synthetic 20/40/80 MHz packets, legacy gain/wire compatibility,
 malformed packets, filters, UTC rollover, named files, atomic writes, shutdown
 flushes, forwarding outages, multiple TCP destinations, blocked sockets, full
 queues and bounded subprocess shutdown. Real sender subprocesses and loopback
-listeners verify the legacy wire bytes. Pi radio commands and capture signalling
+listeners verify the CSI/gain wire bytes and original 70-byte headers. Pi radio commands and capture signalling
 are mocked; actual hardware capture must be verified on the Pi.
 

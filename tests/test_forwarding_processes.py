@@ -62,7 +62,7 @@ def worker_with_blocked_socket(*args):
     forwarding._worker(*args)
 
 
-def test_real_subprocess_per_ip_preserves_exact_legacy_wire_bytes(frame, monkeypatch):
+def test_real_subprocess_per_ip_preserves_wire_bytes_and_header(frame, monkeypatch):
     with listener() as first, listener("127.0.0.2", first.getsockname()[1]) as second:
         settings = Settings(
             send_csi_data=True,
@@ -89,6 +89,8 @@ def test_real_subprocess_per_ip_preserves_exact_legacy_wire_bytes(frame, monkeyp
             assert rows == expected
             assert rows[0][0] == frame.csi_value
             assert rows[0][5] == frame.gain
+            assert rows[0][6] == frame.header
+            assert len(rows[0][6]) == 70
             wait_until(lambda: sender.sent == 2)
 
 

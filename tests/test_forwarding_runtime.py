@@ -63,7 +63,15 @@ def test_plain_tcp_wire_format_against_local_listener(frame):
     assert length == len(received[0]) - 4
     assert pickle.loads(received[0][4:]) == rows
     assert rows == [
-        [frame.csi_value, frame.tx_mac, b"123456", -42, frame.timestamp, frame.gain]
+        [
+            frame.csi_value,
+            frame.tx_mac,
+            b"123456",
+            -42,
+            frame.timestamp,
+            frame.gain,
+            frame.header,
+        ]
     ]
 
 

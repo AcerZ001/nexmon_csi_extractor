@@ -19,7 +19,7 @@ LOGGER = logging.getLogger("csi-forwarding")
 
 
 def send_batch(rows: list, settings: Settings) -> None:
-    """Send one legacy Nexmon batch to one numeric IP in a worker process."""
+    """Send one header-bearing Nexmon batch to one numeric IP in a worker process."""
     payload = pickle.dumps(rows, protocol=pickle.HIGHEST_PROTOCOL)
     ip = settings.control_ip
     family = socket.AF_INET6 if ":" in ip else socket.AF_INET
